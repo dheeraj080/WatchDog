@@ -1,0 +1,24 @@
+# Use an active LTS Node version on Alpine
+FROM node:22-alpine
+
+# Set node environment
+ENV NODE_ENV=production
+
+# Set working directory & create logs directory upfront
+WORKDIR /app
+RUN mkdir -p logs && chown -R node:node /app
+
+# Copy dependency declarations
+COPY package*.json ./
+
+# Switch to non-root user before installing & running code
+USER node
+
+# Install dependencies deterministically based on package-lock.json
+RUN npm ci --only=production
+
+# Copy application source files with correct permissions
+COPY --chown=node:node . .
+
+# Start the worker process
+CMD ["node", "src/services/processor/consumer.js"]
