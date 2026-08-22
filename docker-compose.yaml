@@ -1,13 +1,13 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: watchdog-postgres
+    container_name: pathio-postgres
     environment:
-      POSTGRES_DB: ${PG_DATABASE:-watchdog}
+      POSTGRES_DB: ${PG_DATABASE:-pathio}
       POSTGRES_USER: ${PG_USER:-postgres}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
-    # Ports omitted to keep database internal to Docker network; 
+    # Ports omitted to keep database internal to Docker network;
     # un-comment line below only if you need local GUI access outside Docker:
     # ports:
     #   - "127.0.0.1:5432:5432"
@@ -15,25 +15,25 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql
     networks:
-      - watchdog
+      - pathio
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DATABASE:-watchdog}"]
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DATABASE:-pathio}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   mongo:
     image: mongo:7.0
-    container_name: watchdog-mongo
+    container_name: pathio-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-root}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-watchdog}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-pathio}
     volumes:
       - mongo_data:/data/db
     networks:
-      - watchdog
+      - pathio
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -43,17 +43,17 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: watchdog-rabbitmq
+    container_name: pathio-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-api_user}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-watchdog}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-pathio}
     ports:
       - "127.0.0.1:15672:15672" # Management UI restricted to localhost
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
-      - watchdog
+      - pathio
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -63,7 +63,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:8
-    container_name: watchdog-pgadmin
+    container_name: pathio-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
@@ -72,7 +72,7 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
-      - watchdog
+      - pathio
     restart: unless-stopped
     depends_on:
       postgres:
@@ -82,18 +82,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: watchdog-app
+    container_name: pathio-app
     environment:
       NODE_ENV: production
       PORT: 5000
-      MONGO_URI: mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB_NAME:-watchdog}?authSource=admin
-      MONGO_DB_NAME: ${MONGO_DB_NAME:-watchdog}
+      MONGO_URI: mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB_NAME:-pathio}?authSource=admin
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-pathio}
       PG_HOST: postgres
       PG_PORT: 5432
-      PG_DATABASE: ${PG_DATABASE:-watchdog}
+      PG_DATABASE: ${PG_DATABASE:-pathio}
       PG_USER: ${PG_USER:-postgres}
       PG_PASSWORD: ${PG_PASSWORD}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-api_user}:${RABBITMQ_PASSWORD}@rabbitmq:5672/${RABBITMQ_VHOST:-watchdog}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-api_user}:${RABBITMQ_PASSWORD}@rabbitmq:5672/${RABBITMQ_VHOST:-pathio}
       RABBITMQ_QUEUE: api_hits
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 24h
@@ -104,7 +104,7 @@ services:
     volumes:
       - ./logs:/app/logs
     networks:
-      - watchdog
+      - pathio
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,23 +123,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.consumer
-    container_name: watchdog-consumer
+    container_name: pathio-consumer
     environment:
       NODE_ENV: production
-      MONGO_URI: mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB_NAME:-watchdog}?authSource=admin
-      MONGO_DB_NAME: ${MONGO_DB_NAME:-watchdog}
+      MONGO_URI: mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB_NAME:-pathio}?authSource=admin
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-pathio}
       PG_HOST: postgres
       PG_PORT: 5432
-      PG_DATABASE: ${PG_DATABASE:-watchdog}
+      PG_DATABASE: ${PG_DATABASE:-pathio}
       PG_USER: ${PG_USER:-postgres}
       PG_PASSWORD: ${PG_PASSWORD}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-api_user}:${RABBITMQ_PASSWORD}@rabbitmq:5672/${RABBITMQ_VHOST:-watchdog}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-api_user}:${RABBITMQ_PASSWORD}@rabbitmq:5672/${RABBITMQ_VHOST:-pathio}
       RABBITMQ_QUEUE: api_hits
       JWT_SECRET: ${JWT_SECRET}
     volumes:
       - ./logs:/app/logs
     networks:
-      - watchdog
+      - pathio
     depends_on:
       postgres:
         condition: service_healthy
@@ -160,5 +160,5 @@ volumes:
     driver: local
 
 networks:
-  watchdog:
+  pathio:
     driver: bridge
